@@ -1,17 +1,30 @@
 
-def write_to_google_sheets(summary: dict):
-    """
-    Mocked write function — logs where data would go in Google Sheets.
-    Replace with real gspread logic after validation.
-    """
-    property_name = summary.get("property")
-    month = summary.get("month")
-    print(f"\n--- Writing to Google Sheets ---")
-    print(f"Property: {property_name}")
-    print(f"Month: {month}")
+import gspread
+import streamlit as st
+import json
+from google.oauth2.service_account import Credentials
 
-    for key, value in summary.items():
-        if key not in ["property", "month"]:
-            print(f"  Would write: {key} = {value}")
+def write_to_google_sheets(summary_dict):
+    # Load credentials from Streamlit secrets
+    service_account_info = json.loads(st.secrets["GOOGLE_SHEETS_KEY"])
+    creds = Credentials.from_service_account_info(service_account_info)
 
-    print("--- End Write Preview ---\n")
+    # Authorize with Google Sheets
+    client = gspread.authorize(creds)
+
+    # Open the spreadsheet and select the worksheet
+    spreadsheet = client.open("Management Report Dashboard")
+    worksheet = spreadsheet.sheet1  # or use .worksheet("Sheet Name")
+
+    # Convert the summary dict to a list of values (row)
+    row_data = list(summary_dict.values())
+
+    # Find the next available row
+    existing_rows = worksheet.get_all_values()
+    next_row = len(existing_rows) + 1
+
+    # Insert the new row
+    worksheet.insert_row(row_data, next_row)
+
+    st.success("✅ Data pushed to Google Sheets successfully.")
+
