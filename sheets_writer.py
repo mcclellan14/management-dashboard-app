@@ -1,18 +1,27 @@
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 def write_to_google_sheets(summary: dict):
-    """
-    Mocked write function — logs where data would go in Google Sheets.
-    Replace with real gspread logic after validation.
-    """
-    property_name = summary.get("property")
-    month = summary.get("month")
-    print(f"\n--- Writing to Google Sheets ---")
-    print(f"Property: {property_name}")
-    print(f"Month: {month}")
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_name("management-dashboard-app-de89db34c080.json", scope)
 
-    for key, value in summary.items():
-        if key not in ["property", "month"]:
-            print(f"  Would write: {key} = {value}")
+    client = gspread.authorize(creds)
 
-    print("--- End Write Preview ---\n")
+    # Open your sheet by name or URL
+    sheet = client.open("Management Report Dashboard").sheet1  # or .worksheet("YourTabName")
 
+    # Build row in correct order
+    row = [
+        summary.get("property"),
+        summary.get("month"),
+        summary.get("occupancy"),
+        summary.get("net income"),
+        summary.get("operating expenses"),
+        summary.get("capital expenditures"),
+        summary.get("leasing updates"),
+        summary.get("major repairs"),
+        summary.get("key takeaways"),
+        summary.get("next steps"),
+    ]
+
+    sheet.append_row(row, value_input_option="USER_ENTERED")
