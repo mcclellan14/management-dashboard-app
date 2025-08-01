@@ -44,11 +44,13 @@ if uploaded_files:
         st.dataframe(pd.DataFrame(summary_rows))
 
     # Push to Google Sheets button
+        # Push to Google Sheets button
     if st.button("Push to Google Sheets"):
-        for summary in summary_rows:
-            write_to_google_sheets(summary)
-        st.success("✅ Data successfully pushed to Google Sheets.")
-    except Exception as e:
-        st.error(f"❌ Failed to push data: {e}")
+        try:
+            for summary in summary_rows:
+                write_to_google_sheets(summary)
+            st.success("✅ Data successfully pushed to Google Sheets.")
+        except Exception as e:
+            st.error(f"❌ Failed to push data: {e}")
 
 
