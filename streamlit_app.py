@@ -47,4 +47,8 @@ if uploaded_files:
     if st.button("Push to Google Sheets"):
         for summary in summary_rows:
             write_to_google_sheets(summary)
-        st.success("Mock push to Google Sheets completed.")
+        st.success("✅ Data successfully pushed to Google Sheets.")
+    except Exception as e:
+        st.error(f"❌ Failed to push data: {e}")
+
+
