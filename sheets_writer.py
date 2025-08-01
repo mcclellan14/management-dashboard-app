@@ -1,22 +1,33 @@
-import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import streamlit as st
 
-# Map each property to its cell range
-PROPERTY_RANGES = {
-    "Northland 1": "A1:G15",
-    "Northland 2": "A17:G31",
-    "Northland 3A&B": "A33:G47",
-    "Northland 3C": "A49:G63",
-    "Riverside": "A65:G79",
-    "Glenmore": "A81:G95",
-    "Cambrian": "A97:G111",
-    "Greenview": "A113:G127",
-    "Foothills": "A129:G143",
-    "High River Plaza": "A145:G159",
-    "Pioneer Square": "A161:G175",
-    "Richfield": "A177:G191",
-    "211 N Albert Street": "A193:G207",
+# Define where each property's data goes
+PROPERTY_CELL_RANGES = {
+    "Northland 1": (1, 15),
+    "Northland 2": (17, 31),
+    "Northland 3A&B": (33, 47),
+    "Northland 3C": (49, 63),
+    "Riverside": (65, 79),
+    "Glenmore": (81, 95),
+    "Cambrian": (97, 111),
+    "Greenview": (113, 127),
+    "Foothills": (129, 143),
+    "High River Plaza": (145, 159),
+    "Pioneer Square": (161, 175),
+    "Richfield": (177, 191),
+    "211 N Albert Street": (193, 207),
+}
+
+ROW_MAPPING = {
+    "occupancy": 0,
+    "operating expenses": 1,
+    "capital expenditures": 2,
+    "net income": 3,
+    "leasing updates": 4,
+    "major repairs": 5,
+    "key takeaways": 6,
+    "next steps": 7,
 }
 
 def write_to_google_sheets(summary: dict):
@@ -24,50 +35,31 @@ def write_to_google_sheets(summary: dict):
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive"
     ]
-    creds_dict = st.secrets["gcp_service_account"]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        st.secrets["gcp_service_account"], scope
+    )
     client = gspread.authorize(creds)
 
-    spreadsheet = client.open_by_key("1JcEi1sXNlwiCnomWK_vcYvksdhhFgkbwmwXla9q_zhI")
-    worksheet = spreadsheet.sheet1
+    sheet = client.open_by_key("1JcEi1sXNlwiCnomWK_vcYvksdhhFgkbwmwXla9q_zhI").sheet1
 
     property_name = summary.get("property")
     month = summary.get("month")
 
-    if property_name not in PROPERTY_RANGES:
-        st.error(f"❌ Unknown property: {property_name}")
+    if property_name not in PROPERTY_CELL_RANGES:
+        st.warning(f"Unknown property: {property_name}")
         return
 
-    range_start = PROPERTY_RANGES[property_name].split(":")[0]
-    row_start = int(range_start[1:])
+    start_row, end_row = PROPERTY_CELL_RANGES[property_name]
 
-    # Read existing B and C columns
-    existing_values = worksheet.get(PROPERTY_RANGES[property_name])
-    if not existing_values or len(existing_values) < 1:
-        st.error(f"❌ No existing labels found in range for {property_name}.")
-        return
-
-    # Shift column B to column C
-    for i, row in enumerate(existing_values):
-        if len(row) > 1:
-            worksheet.update_cell(row_start + i, 3, row[1])  # C = col 3
-
-    # Write new values to column B
-    value_map = {
-        "occupancy": 1,
-        "net income": 2,
-        "operating expenses": 3,
-        "capital expenditures": 4,
-        "leasing updates": 5,
-        "major repairs": 6,
-        "key takeaways": 7,
-        "next steps": 8
-    }
-
-    worksheet.update_cell(row_start, 2, month)  # Header row gets the month in col B
-
-    for i, key in enumerate(value_map.keys()):
+    for key, row_offset in ROW_MAPPING.items():
         value = summary.get(key, "")
-        worksheet.update_cell(row_start + i + 1, 2, value)  # B = col 2
+        if value:
+            target_row = start_row + row_offset
 
-    st.success(f"✅ Updated {property_name} data for {month} in Google Sheets.")
+            # Shift current B to C (i.e., preserve previous month)
+            old_value = sheet.cell(target_row + 1, 2).value  # B column
+            if old_value:
+                sheet.update_cell(target_row + 1, 3, old_value)  # move to column C
+
+            # Write new value to column B
+            sheet.update_cell(target_row + 1, 2, value)  # row is 1-indexed
