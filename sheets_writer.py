@@ -9,7 +9,7 @@ def write_to_google_sheets(summary: dict):
     client = gspread.authorize(creds)
 
     # Open your sheet by name or URL
-    sheet = client.open("Management Report Dashboard").sheet1  # or .worksheet("YourTabName")
+    sheet = client.open_by_key("https://docs.google.com/spreadsheets/d/1JcEi1sXNlwiCnomWK_vcYvksdhhFgkbwmwXla9q_zhI/edit?gid=0#gid=0").sheet1  # or .worksheet("YourTabName")
 
     # Build row in correct order
     row = [
